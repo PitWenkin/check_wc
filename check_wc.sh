@@ -2,7 +2,7 @@
 
 #Makes use of https://github.com/lausser/check_nwc_health to list number of working accesspoints
 #Written by Pit Wenkin
-#Version 1.1
+#Version 1.2
 # - Added variables for warning and critical status
 
 accesspoints="0"
@@ -50,7 +50,7 @@ else
                 percent=`expr $hundred / $accesspoints`
                 percent=${percent%.*}
                 if [ "$percent" -gt "$critical" ] ; then
-                        echo "CRITCAL - $apdown accesspoints are down / $apup accesspoints are up"
+                        echo "CRITICAL - $apdown accesspoints are down / $apup accesspoints are up"
                         exit 2
                 else
                         if [ "$percent" -gt "$warning" ] ; then
