@@ -2,9 +2,10 @@
 
 #Makes use of https://github.com/lausser/check_nwc_health to list number of working accesspoints
 #Written by Pit Wenkin
-#Version 1.3
+#Version 1.4
 # - Added variables for warning and critical status
 # - Added variables for returned state
+# - Added performance data
 
 accesspoints="0"
 community=""
@@ -81,6 +82,9 @@ else
                 output="ERROR - More accesspoints visible then should exist / $apup instead of $accesspoints"
                 intReturn=$STATE_CRITICAL;
         fi
+
+        perfdata="'Accesspoints'=$apup;;;0;$accesspoints"
+        output="$output|$perfdata"
 
         echo -e $output
         exit $intReturn
