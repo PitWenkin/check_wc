@@ -2,8 +2,10 @@
 
 #Makes use of https://github.com/lausser/check_nwc_health to list number of working accesspoints
 #Written by Pit Wenkin
-#Version 1.2
+#Version 1.4
 # - Added variables for warning and critical status
+# - Added variables for returned state
+# - Added performance data
 
 accesspoints="0"
 community=""
@@ -11,6 +13,15 @@ hostname=""
 port="161"
 warning="1"
 critical="10"
+
+# nagios return values
+export STATE_OK=0
+export STATE_WARNING=1
+export STATE_CRITICAL=2
+export STATE_UNKNOWN=3
+export STATE_DEPENDENT=4
+
+intReturn=$STATE_UNKNOWN
 
 usage()
 {
@@ -50,28 +61,31 @@ else
                 percent=`expr $hundred / $accesspoints`
                 percent=${percent%.*}
                 if [ "$percent" -gt "$critical" ] ; then
-                        echo "CRITICAL - $apdown accesspoints are down / $apup accesspoints are up"
-                        exit 2
+                        output="CRITICAL - $apdown accesspoints are down / $apup accesspoints are up"
+                        intReturn=$STATE_CRITICAL;
                 else
                         if [ "$percent" -gt "$warning" ] ; then
-                                echo "WARNING - $apdown accesspoints are down / $apup accesspoints are up"
-                                exit 1
+                                output="WARNING - $apdown accesspoints are down / $apup accesspoints are up"
+                                intReturn=$STATE_WARNING;
                         fi
                 fi
-                echo "OK - $apdown accesspoints are down / $apup accesspoints are up"
-                exit 0
+                output="OK - $apdown accesspoints are down / $apup accesspoints are up"
+                intReturn=$STATE_WARNING;
         fi
 
         if [ "$apdown" = "0" ] ; then
-                echo "OK - $accesspoints accesspoints are up"
-                exit 0
+                output="OK - $accesspoints accesspoints are up"
+                intReturn=$STATE_OK
         fi
 
         if [ "$apup" -gt "$accesspoints" ] ; then
-                echo "ERROR - More accesspoints visible then should exist / $apup instead of $accesspoints"
-                exit 2
+                output="ERROR - More accesspoints visible then should exist / $apup instead of $accesspoints"
+                intReturn=$STATE_CRITICAL;
         fi
 
-        echo "UNKOWN"
-        exit 3
+        perfdata="'Accesspoints'=$apup;;;0;$accesspoints"
+        output="$output|$perfdata"
+
+        echo -e $output
+        exit $intReturn
 fi
