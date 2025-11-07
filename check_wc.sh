@@ -2,10 +2,11 @@
 
 #Makes use of https://github.com/lausser/check_nwc_health to list number of working accesspoints
 #Written by Pit Wenkin
-#Version 1.4
+#Version 1.5
 # - Added variables for warning and critical status
 # - Added variables for returned state
 # - Added performance data
+# - Added timeout check for check_nwc_health
 
 accesspoints="0"
 community=""
@@ -52,37 +53,49 @@ done
 if [ "$hostname" = "" ] || [ "$community" = "" ] ; then
     usage
 else
-        output=`/usr/lib/nagios/plugins/check_nwc_health --hostname $hostname --port $port --community $community --mode list-interfaces | grep -o '[0-9]\{6\} ap[0-9]\{1,3\}s0' | wc -l`
-        apdown=`expr $output - $accesspoints`
-        apup=`expr $accesspoints + $apdown`
-        if [ "$output" -ne "1" ] && [ "$apdown" -lt "0" ] ; then
-                apdown=${apdown#-}
-                hundred=`expr 100 '*' "$apdown"`
-                percent=`expr $hundred / $accesspoints`
-                percent=${percent%.*}
-                if [ "$percent" -gt "$critical" ] ; then
-                        output="CRITICAL - $apdown accesspoints are down / $apup accesspoints are up"
-                        intReturn=$STATE_CRITICAL;
-                else
-                        if [ "$percent" -gt "$warning" ] ; then
-                                output="WARNING - $apdown accesspoints are down / $apup accesspoints are up"
-                                intReturn=$STATE_WARNING;
+        output=`/usr/lib/nagios/plugins/check_nwc_health --hostname $hostname --port $port --community $community --mode list-interfaces`
+        if [[ $output == "UNKNOWN - check_nwc_health timed out"* ]] ; then
+                #returning output as is
+                output=$output
+                intReturn=$STATE_UNKNOWN;
+        else if [[ $output == "CRITICAL "* ]] ; then
+                #returning output as is
+                output=$output
+                intReturn=$STATE_CRITICAL;
+        else
+                output=`echo $output | grep -o '[0-9]\{6\} ap[0-9]\{1,3\}s0' | wc -l`
+                apdown=`expr $output - $accesspoints`
+                apup=`expr $accesspoints + $apdown`
+                if [ "$output" -ne "1" ] && [ "$apdown" -lt "0" ] ; then
+                        apdown=${apdown#-}
+                        hundred=`expr 100 '*' "$apdown"`
+                        percent=`expr $hundred / $accesspoints`
+                        percent=${percent%.*}
+                        if [ "$percent" -gt "$critical" ] ; then
+                                output="CRITICAL - $apdown accesspoints are down / $apup accesspoints are up"
+                                intReturn=$STATE_CRITICAL;
+                        else
+                                if [ "$percent" -gt "$warning" ] ; then
+                                        output="WARNING - $apdown accesspoints are down / $apup accesspoints are up"
+                                        intReturn=$STATE_WARNING;
+                                fi
                         fi
                 fi
-        fi
 
-        if [ "$apdown" = "0" ] ; then
-                output="OK - $accesspoints accesspoints are up"
-                intReturn=$STATE_OK
-        fi
+                if [ "$apdown" = "0" ] ; then
+                        output="OK - $accesspoints accesspoints are up"
+                        intReturn=$STATE_OK
+                fi
 
-        if [ "$apup" -gt "$accesspoints" ] ; then
-                output="ERROR - More accesspoints visible then should exist / $apup instead of $accesspoints"
-                intReturn=$STATE_CRITICAL;
-        fi
+                if [ "$apup" -gt "$accesspoints" ] ; then
+                        output="ERROR - More accesspoints visible then should exist / $apup instead of $accesspoints"
+                        intReturn=$STATE_CRITICAL;
+                fi
 
-        perfdata="'Accesspoints'=$apup;;;0;$accesspoints"
-        output="$output|$perfdata"
+                perfdata="'Accesspoints'=$apup;;;0;$accesspoints"
+                output="$output|$perfdata"
+        fi
+        fi
 
         echo -e $output
         exit $intReturn
