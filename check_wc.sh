@@ -69,8 +69,6 @@ else
                                 intReturn=$STATE_WARNING;
                         fi
                 fi
-                output="OK - $apdown accesspoints are down / $apup accesspoints are up"
-                intReturn=$STATE_WARNING;
         fi
 
         if [ "$apdown" = "0" ] ; then
